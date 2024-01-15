@@ -1,0 +1,132 @@
+bch_account_selection_100637:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100637
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100639:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100639
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100641:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100641
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100643:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100643
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100645:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100645
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100647:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100647
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100649:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100649
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100655:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100655
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100661:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100661
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_100741:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 100741
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default
+bch_account_selection_216547:
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments: 216547
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  strategy_parameters:
+    strategy_type: strategy_default

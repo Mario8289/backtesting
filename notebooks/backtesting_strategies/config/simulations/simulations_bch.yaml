@@ -1,0 +1,31 @@
+bch_test:
+  constructor: zip
+  exit_parameters:
+    exit_type: aggressive
+    stoploss_limit: 100000
+    takeprofit_limit: 100000
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments:
+  - 100643
+  - 100655
+  - 100639
+  - 100637
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    strategy_type: bch
+    min_directional_consensus: 0.0
+    min_consensus_buffer_factor: 0.0
+    max_ratio_per_position: 1.0
+    max_ratio_buffer_factor: 1.0
+    position_trigger: 
+    - 500
+    - 750
+    - 1000
+    position_buffer_factor: 0.9
+    follow_client: true
+    risk_ratio: 0.2

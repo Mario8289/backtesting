@@ -1,0 +1,31 @@
+profiler_test:
+  constructor: zip
+  exit_parameters:
+    exit_type: exit_default
+  filter_snapshot_for_strategy: false
+  filter_snapshot_for_traded_account_instrument_pairs: false
+  instruments:
+  - 100643
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    strategy_type: bbooking_profiler
+    model_type: profiling_ranks
+    score_booking_risk: 
+        0: 100
+        1: 100
+        2: 80
+        3: 0
+        4: 0
+        5: 0
+    rank_evaluation_string:
+        rank1: profitable_rpnl_ratio > losing_rpnl_ratio
+        rank2: profitable_rpnl_trades_cnt > losing_rpnl_trades_cnt
+        rank3: profitable_rpnl_avg_event > losing_rpnl_avg_event
+        rank4: profitable_rpnl_avg_hold_time > losing_rpnl_avg_hold_time
+        rank5: hft_trade_ratio > .5 and hft_total_rpnl_usd > 0
+    train_freq: 20
+    train_period: 30

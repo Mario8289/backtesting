@@ -1,0 +1,211 @@
+bullion_pairs_aggressive:
+  constructor: product
+  exit_parameters:
+    exit_type: aggressive
+    stoploss_limit:
+    - 50
+    - 100
+    - 200
+    - 500
+    takeprofit_limit:
+    - 50
+    - 100
+    - 200
+    - 500
+  filter_snapshot_for_strategy: true
+  filter_snapshot_for_traded_account_instrument_pairs: true
+  instruments:
+  - 216547
+  - 204254
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: true
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    max_pos_qty:
+    - 100
+    - 250
+    - 500
+    max_pos_qty_buffer: 1.25
+    position_lifespan: gfw
+    position_lifespan_exit_parameters:
+      downtick: 2
+      exit_type: chaser
+      maxdowntick: 100
+      maxuptick: 2
+      starttick: 0
+      uptick: 2
+    strategy_type: internalisation
+emerging_pairs_aggressive:
+  constructor: product
+  exit_parameters:
+    exit_type: aggressive
+    stoploss_limit:
+    - 1000
+    - 2500
+    - 5000
+    takeprofit_limit:
+    - 1000
+    - 2500
+    - 5000
+  filter_snapshot_for_strategy: true
+  filter_snapshot_for_traded_account_instrument_pairs: true
+  instruments:
+  - 100695
+  - 100699
+  - 100733
+  - 100739
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: true
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    max_pos_qty:
+    - 100
+    - 200
+    - 300
+    max_pos_qty_buffer: 1.25
+    position_lifespan: gfw
+    position_lifespan_exit_parameters:
+      downtick: 2
+      exit_type: chaser
+      maxdowntick: 100
+      maxuptick: 2
+      starttick: 0
+      uptick: 2
+    strategy_type: internalisation
+israeli_pairs_aggressive:
+  constructor: product
+  exit_parameters:
+    exit_type: aggressive
+    stoploss_limit:
+    - 150
+    - 300
+    - 500
+    takeprofit_limit:
+    - 150
+    - 300
+    - 500
+  filter_snapshot_for_strategy: true
+  filter_snapshot_for_traded_account_instrument_pairs: true
+  instruments:
+  - 191966
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: true
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    max_pos_qty:
+    - 100
+    - 200
+    - 300
+    max_pos_qty_buffer: 1.25
+    position_lifespan: gfw
+    position_lifespan_exit_parameters:
+      downtick: 2
+      exit_type: chaser
+      maxdowntick: 100
+      maxuptick: 2
+      starttick: 0
+      uptick: 2
+    strategy_type: internalisation
+liquid_pairs_aggressive:
+  constructor: product
+  exit_parameters:
+    exit_type: aggressive
+    stoploss_limit:
+    - 25
+    - 50
+    - 100
+    - 150
+    takeprofit_limit:
+    - 25
+    - 50
+    - 100
+    - 150
+  filter_snapshot_for_strategy: true
+  filter_snapshot_for_traded_account_instrument_pairs: true
+  instruments:
+  - 100641
+  - 100651
+  - 100653
+  - 100657
+  - 100659
+  - 100663
+  - 100665
+  - 100667
+  - 100669
+  - 100707
+  - 100709
+  - 100743
+  - 100745
+  - 100747
+  - 100789
+  - 100791
+  - 100793
+  - 100795
+  - 100797
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: true
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    max_pos_qty:
+    - 100
+    - 200
+    - 300
+    max_pos_qty_buffer: 1.25
+    position_lifespan: gfw
+    position_lifespan_exit_parameters:
+      downtick: 2
+      exit_type: chaser
+      maxdowntick: 100
+      maxuptick: 2
+      starttick: 0
+      uptick: 2
+    strategy_type: internalisation
+scandi_pairs_aggressive:
+  constructor: product
+  exit_parameters:
+    exit_type: aggressive
+    stoploss_limit:
+    - 1000
+    - 2500
+    - 5000
+    takeprofit_limit:
+    - 1000
+    - 2500
+    - 5000
+  filter_snapshot_for_strategy: true
+  filter_snapshot_for_traded_account_instrument_pairs: true
+  instruments:
+  - 100701
+  - 100717
+  - 100703
+  - 100719
+  - 100705
+  - 100721
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: true
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    max_pos_qty:
+    - 50
+    - 100
+    - 200
+    max_pos_qty_buffer: 1.25
+    position_lifespan: gfw
+    position_lifespan_exit_parameters:
+      downtick: 2
+      exit_type: chaser
+      maxdowntick: 100
+      maxuptick: 2
+      starttick: 0
+      uptick: 2
+    strategy_type: internalisation

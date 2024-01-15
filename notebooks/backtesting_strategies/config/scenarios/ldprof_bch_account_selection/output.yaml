@@ -1,0 +1,19 @@
+bucket: risk-temp
+by: null
+directory: backtesting/simulation_output/bch_account_selection
+event_features:
+- symbol
+- order_book_id
+- currency
+- account_id
+file: null
+filesystem: s3
+freq: null
+metrics:
+- performance_overview
+- trading_actions_breakdown
+- inventory_overview
+mode: w
+resample_rule: null
+save: true
+store_index: true

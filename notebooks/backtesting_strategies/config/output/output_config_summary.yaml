@@ -1,0 +1,18 @@
+bucket: risk-temp
+by: trading_session
+directory: backtesting/simulation_outputs
+event_features:
+- symbol
+- order_book_id
+- account_id
+file: null
+filesystem: s3
+freq: D
+metrics:
+- performance_overview
+- trading_actions_breakdown
+- inventory_overview
+mode: w
+resample_rule: summary
+save: true
+store_index: false

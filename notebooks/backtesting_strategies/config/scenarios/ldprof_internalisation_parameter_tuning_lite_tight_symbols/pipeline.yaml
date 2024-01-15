@@ -1,0 +1,20 @@
+calculate_cumulative_daily_pnl: true
+event_stream_parameters:
+  event_stream_type: event_stream_sample
+  excl_period: null
+  sample_rate: 0.3
+level: trades_only
+lmax_account: 1463064262
+load_starting_positions: true
+matching_engine_parameters:
+  matching_engine_type: matching_engine_tob
+matching_method: side_of_book
+netting_engine: fifo
+process_client_portfolio: true
+process_lmax_portfolio: false
+shard: ldprof
+simulator: simulator_pool
+store_client_trade_snapshot: true
+store_lmax_trade_snapshot: false
+uid: ld-bch_account_selection
+version: 1

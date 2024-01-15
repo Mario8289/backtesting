@@ -1,0 +1,30 @@
+emerging_pairs_aggressive:
+  constructor: product
+  exit_parameters:
+    exit_type: aggressive
+    stoploss_limit:
+    - 70
+    takeprofit_limit:
+    - 70
+  filter_snapshot_for_strategy: true
+  filter_snapshot_for_traded_account_instrument_pairs: true
+  instruments:
+  - 100643
+  load_instruments_from_snapshot: false
+  load_target_accounts_from_snapshot: false
+  risk_parameters:
+    risk_type: no_risk
+  split_by_instrument: true
+  strategy_parameters:
+    max_pos_qty:
+    - 100
+    max_pos_qty_buffer: 1.25
+    position_lifespan: gfw
+    position_lifespan_exit_parameters:
+      downtick: 2
+      exit_type: chaser
+      maxdowntick: 100
+      maxuptick: 2
+      starttick: 0
+      uptick: 2
+    strategy_type: internalisation
