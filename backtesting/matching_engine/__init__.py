@@ -1,22 +1,14 @@
 from typing import Any, Dict
 
-from risk_backtesting.matching_engine.base import AbstractMatchingEngine
-from risk_backtesting.matching_engine.matching_engine_default import (
+from backtesting.matching_engine.base import AbstractMatchingEngine
+from backtesting.matching_engine.matching_engine_default import (
     MatchingEngineDefault,
 )
-from risk_backtesting.matching_engine.matching_engine_distribution import (
-    MatchingEngineDistribution,
-)
-from risk_backtesting.matching_engine.matching_engine_tob import MatchingEngineTob
 
 
 def get_matching_engine(matching_engine_reference):
     if matching_engine_reference == "matching_engine_default":
         return MatchingEngineDefault
-    elif matching_engine_reference == "matching_engine_tob":
-        return MatchingEngineTob
-    elif matching_engine_reference == "matching_engine_distribution":
-        return MatchingEngineDistribution
     else:
         raise KeyError(f"invalid matching engine reference {matching_engine_reference}")
 

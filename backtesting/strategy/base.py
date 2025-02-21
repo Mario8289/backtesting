@@ -4,8 +4,8 @@ from typing import List
 
 import pandas as pd
 
-from risk_backtesting.event import Event
-from risk_backtesting.order import Order
+from backtesting.event import Event
+from backtesting.order import Order
 
 
 class AbstractStrategy(ABC):
@@ -22,7 +22,7 @@ class AbstractStrategy(ABC):
 
     # todo: create abstract portfolios that both backtester and closed positions and anything else can reference
     @abstractmethod
-    def on_state(self, client_portfolio, lmax_portfolio, event: Event) -> List[Order]:
+    def on_state(self, portfolio, event: Event) -> List[Order]:
         """
         handles the current state of the backtester
         """

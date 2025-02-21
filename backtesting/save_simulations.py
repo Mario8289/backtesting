@@ -3,7 +3,7 @@ import logging
 
 import pandas as pd
 
-from risk_backtesting.writers import Writer
+from backtesting.writers import Writer
 
 
 def construct_path(datasource_label: str, date: dt.date = None) -> str:
@@ -59,12 +59,9 @@ def save_simulation(
         uid: str,
         version: int,
         mode: str,
-        directory: str,
-        datasource_label: str,
         store_index: bool,
         split_results_by: str = None,
         split_results_freq: str = None,
-        bucket: str = None,
         file: str = None,
 ):
     logger = logging.getLogger("save")
@@ -89,17 +86,13 @@ def save_simulation(
                     file=file,
                 )
                 logger.info(file)
-                logger.info(directory)
-                logger.info(bucket)
+
                 logger.info(date)
                 logger.info(mode)
 
                 writer.write_results(
                     results=grp.copy(),
-                    datasource_label=datasource_label,
                     store_index=store_index,
-                    prefix=directory,
-                    bucket=bucket,
                     mode=mode,
                     file=file,
                     date=date.date(),
@@ -113,10 +106,7 @@ def save_simulation(
             )
             writer.write_results(
                 results=df.copy(),
-                datasource_label=datasource_label,
                 store_index=store_index,
-                prefix=directory,
-                bucket=bucket,
                 mode=mode,
                 file=file,
             )

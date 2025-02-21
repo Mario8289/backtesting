@@ -1,15 +1,15 @@
-bucket: risk-temp
-directory: backtesting/simulation_outputs
+datastore: CsvWriter
+datastore_parameters: 
+    entry_point: C:/Users/marriotta/code/backtesting/notebooks/scratch/backtesting/simulation_outputs
 event_features:
-- symbol
-- order_book_id
-- account_id
+    - source
+    - symbol_id
 file: null
 by: null
-filesystem: s3
 freq: null
 metrics: null
 mode: w
 resample_rule: null
-save: false
+save: true
 store_index: false
+save_per_simulation: false

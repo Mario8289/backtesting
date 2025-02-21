@@ -1,24 +1,20 @@
-calculate_cumulative_daily_pnl: false
+calculate_cumulative_daily_pnl: true
 event_stream_parameters:
-  event_stream_type: event_stream_sample
-  excl_period:
-  - - 16
-    - 30
-  - - 18
-    - 30
-  sample_rate: 0.3
+  event_stream_type: event_stream_snapshot
+  excl_period: null
+  sample_rate: D
+  include_eod_snapshot: true
 level: mark_to_market
-lmax_account: 1463064262
-load_starting_positions: true
+load_starting_positions: false
 matching_engine_parameters:
-  matching_engine_type: matching_engine_tob
+  matching_engine_type: matching_engine_default
 matching_method: side_of_book
 netting_engine: fifo
-process_client_portfolio: false
-process_lmax_portfolio: true
-shard: ldprof
+process_portfolio: true
 simulator: simulator_pool
-store_client_trade_snapshot: false
-store_lmax_trade_snapshot: true
+store_trade_snapshot: true
+store_md_snapshot: true
+store_order_snapshot: true
+store_eod_snapshot: true
 uid: ld-int-pt
 version: 1

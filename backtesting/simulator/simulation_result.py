@@ -4,7 +4,7 @@ from typing import Any, List
 
 import pandas as pd
 
-from risk_backtesting.simulator.simulation_plan import SimulationPlan
+from backtesting.simulator.simulation_plan import SimulationPlan
 
 
 class SimulationResult(ABC):

@@ -2,7 +2,7 @@ from typing import List
 
 import pandas as pd
 
-from risk_backtesting.simulator.simulation_result import SimulationResult
+from backtesting.simulator.simulation_result import SimulationResult
 
 
 class SimulationBatchResult:

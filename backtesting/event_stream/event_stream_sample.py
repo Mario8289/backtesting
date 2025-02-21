@@ -4,6 +4,7 @@ from typing import List
 import pandas as pd
 import pytz
 
+from ..subscriptions.attribute_codes import Apply_Sampling
 from ..event_stream.event_stream import EventStream
 
 utc_tz = pytz.timezone("UTC")
@@ -27,13 +28,15 @@ class EventStreamSample(EventStream):
             include_eod_snapshot=include_eod_snapshot,
         )
 
-    def sample(self, tob: pd.DataFrame, trading_session: dt.datetime) -> pd.DataFrame:
-        if not tob.empty:
-            tob_sample = (
-                tob.groupby(["order_book_id"])
+    def sample(self, data: pd.DataFrame, trading_session: dt.datetime) -> pd.DataFrame:
+        if not data.empty:
+            apply_sample_df = data[data[Apply_Sampling] == True]
+            dont_apply_sample_df = data[data[Apply_Sampling] == False]
+
+            sampled_df = (
+                apply_sample_df.groupby(['symbol'])
                 .apply(lambda grp: grp.sample(frac=self.sample_rate))
                 .reset_index(level=0, drop=True)
             )
-            return tob_sample
-        else:
-            return tob
+            data = pd.concat([dont_apply_sample_df, sampled_df]).sort_index()
+        return data

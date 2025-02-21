@@ -23,172 +23,115 @@ class Stats(AbstractStatistics):
         self.equity_benchmark = {}
         self.events = []
         self.position_snapshots = {}
+        self.event_snapshot_keys = ['timestamp', 'trading_session', 'event_type', 'source', 'symbol_id', 'price']
+        self.portfolio_snapshot_keys = ['net_position', 'realised_pnl_cum', 'unrealised_pnl_cum', 'equity']
+        self.order_snapshot_keys = ['cancellation_reason', 'contract_qty']
+        self.execution_id = 0
+
+    @property
+    def event_columns(self):
+        return ['execution_id'] + self.event_snapshot_keys + self.portfolio_snapshot_keys + self.order_snapshot_keys
+
+    def _snapshot(self, snapshot, event, event2=None):
+        values = []
+        keys = getattr(self, snapshot)
+
+        for attr in keys:
+            if hasattr(event, attr):
+                value = getattr(event, attr)
+            else:
+                if hasattr(event2, attr):
+                    value = getattr(event2, attr)
+                else:
+                    value = None
+            values.append(value)
+
+        return values
+
+    def _portfolio_snapshot(self, portfolio):
+
+        if portfolio:
+            net_position = portfolio.total_net_position
+            realised_pnl = portfolio.realised_pnl
+            unrealised_pnl = portfolio.unrealised_pnl
+            equity = portfolio.equity
+
+            values = [net_position, realised_pnl, unrealised_pnl, equity]
+
+        else:
+            values = [None] * len(self.portfolio_snapshot_keys)
+
+        return values
+
+    def _order_snapshot(self, trade, order):
+        if order:
+            # account_id = order.account_id
+            order_qty = order.contract_qty
+            cancellation_reason = order.cancellation_reason
+
+            values = [cancellation_reason, order_qty]
+        elif trade:
+            # account_id = trade.account_id
+            trade_qty = trade.contract_qty
+
+            values = [None, trade_qty]
+
+        else:
+            values = [None] * len(self.order_snapshot_keys)
+
+        return values
+
+    def _event_snapshot(
+            self,
+            event,
+            trade,
+            order,
+            matching_method
+    ):
+
+        if order is not None:
+            if order.price is None:
+                order.price = event.get_price(
+                    is_long=not order.is_long,
+                    matching_method=matching_method
+                )
+            snapshot = self._snapshot('event_snapshot_keys', order, event)
+
+        elif trade is not None:
+            snapshot = self._snapshot('event_snapshot_keys', trade, event)
+
+        else:
+            snapshot = self._snapshot('event_snapshot_keys', event)
+
+        return snapshot
 
     def update_event_snapshot(
             self,
-            ts=None,
             portfolio=None,
             event=None,
             order=None,
-            store_md_snapshot=False,
-            label=None,
-            price=None,
+            trade=None
     ):
-        venue = event.venue
-        order_book_id = event.order_book_id
-        e_type = event.event_type
-        price = event.get_tob_price(match=portfolio.matching_method)
-        mid_price = price = event.get_tob_price(match="mid")
+        event_snapshot = self._event_snapshot(event, trade, order, portfolio.matching_method)
+        portfolio_snapshot = self._portfolio_snapshot(portfolio)
+        order_snapshot = self._order_snapshot(trade, order)
 
-        if e_type in ["trade", "hedge", "internal", "bbook", "trigger"]:
-            price = event.price / 1e6
-            account = event.account_id
-            pos = None
-            if (venue, order_book_id, account) in portfolio.positions:
-                pos = portfolio.positions[venue, order_book_id, account]
-            elif (venue, order_book_id, account) in portfolio.closed_positions:
-                pos = portfolio.closed_positions[venue, order_book_id, account]
-            if pos is not None:
-                net_qty = pos.net_position / 100
-                currency_inventory_contracts = (
-                        portfolio.inventory_contracts[event.contract_unit_of_measure] / 100
-                )
-
-                currency_inventory_dollars = (
-                        portfolio.inventory_dollars[event.contract_unit_of_measure] / 1e8
-                )
-
-                event_snapshot = [
-                    ts,
-                    venue,
-                    event.symbol,
-                    event.contract_unit_of_measure,
-                    event.currency,
-                    order_book_id,
-                    mid_price,
-                    price,
-                    pos.get_price() / 1000000,
-                    net_qty,
-                    currency_inventory_contracts,
-                    currency_inventory_dollars,
-                    event.contract_qty / 100,
-                    1 if event.contract_qty > 0 else 0,
-                    pos.unrealised_pnl,
-                    pos.realised_pnl,
-                    (net_qty * mid_price * pos.unit_price) * event.rate_to_usd,
-                    pos.notional_traded,
-                    pos.notional_traded_net,
-                    pos.notional_rejected,
-                    pos.tighten_cost,
-                    int(account),
-                    event.counterparty_account_id,
-                    None if order is None else order.signal,
-                    e_type,
-                    label,
-                    event.trading_session,
-                    ]
-                self.events.append(event_snapshot)
-                # self.df_events.loc[self.evt, :] = event_snapshot
-                # self.evt += 1
-
-        elif (
-                e_type == "market_data" and price is not None and store_md_snapshot
-        ) or e_type == "closing_price":
-            for ((venue, order_book_id, account), pos) in portfolio.positions.items():
-                net_qty = pos.calculate_net_contracts() / 100
-                currency_inventory_contracts = (
-                        portfolio.inventory_contracts.get(event.contract_unit_of_measure, 0)
-                        / 100
-                )
-
-                currency_inventory_dollars = (
-                        portfolio.inventory_dollars.get(event.contract_unit_of_measure, 0)
-                        / 1e8
-                )
-
-                event_snapshot = [
-                    ts,
-                    venue,
-                    event.symbol,
-                    event.contract_unit_of_measure,
-                    event.currency,
-                    order_book_id,
-                    mid_price,
-                    None,
-                    pos.get_price() / 1000000,
-                    net_qty,
-                    currency_inventory_contracts,
-                    currency_inventory_dollars,
-                    0,
-                    np.sign(net_qty),
-                    pos.unrealised_pnl,
-                    pos.realised_pnl,
-                    (net_qty * mid_price * pos.unit_price) * event.rate_to_usd,
-                    pos.notional_traded,
-                    pos.notional_traded_net,
-                    pos.notional_rejected,
-                    pos.tighten_cost,
-                    int(account),
-                    event.counterparty_account_id,
-                    None if order is None else order.signal,
-                    e_type,
-                    label,
-                    event.trading_session,
-                    ]
-                self.events.append(event_snapshot)
+        snapshot = [self.execution_id] + event_snapshot + portfolio_snapshot + order_snapshot
+        self.events.append(snapshot)
 
     def events_to_df(self, event_features, upnl_reversals=pd.DataFrame()):
         try:
-
             df = pd.DataFrame(
                 data=self.events,
-                columns=[
-                    "timestamp",
-                    "venue",
-                    "symbol",
-                    "contract_unit_of_measure",
-                    "currency",
-                    "order_book_id",
-                    "tob_price",
-                    "trade_price",
-                    "avg_price",
-                    "net_qty",
-                    "inventory_contracts_cum",
-                    "inventory_dollars_cum",
-                    "trade_qty",
-                    "is_long",
-                    "upnl",
-                    "rpnl_cum",
-                    "notional_mtm",
-                    "notional_traded_cum",
-                    "notional_traded_net_cum",
-                    "notional_rejected_cum",
-                    "tighten_cost_cum",
-                    "account_id",
-                    "counterparty_account_id",
-                    "action",
-                    "type",
-                    "portfolio",
-                    "trading_session",
-                ],
+                columns=self.event_columns,
             )
-            df["trading_session"] = pd.to_datetime(df["trading_session"])
-            df["net_rpnl_cum"] = df["rpnl_cum"] - df["tighten_cost_cum"]
             df["timestamp"] = pd.to_datetime(df["timestamp"])
             df.set_index("timestamp", inplace=True)
             for (new_col, old_col) in [
-                ("rpnl", "rpnl_cum"),
-                ("notional_mtm_change", "notional_mtm"),
-                ("notional_traded", "notional_traded_cum"),
-                ("notional_traded_net", "notional_traded_net_cum"),
-                ("notional_rejected", "notional_rejected_cum"),
-                ("tighten_cost", "tighten_cost_cum"),
-                ("net_rpnl", "net_rpnl_cum"),
-                ("upnl_reversal", "upnl"),
-                ("inventory_contracts", "inventory_contracts_cum"),
-                ("inventory_dollars", "inventory_dollars_cum"),
+                ("realised_pnl", "realised_pnl_cum"),
+                ("unrealised_pnl", "unrealised_pnl_cum"),
             ]:
-                if old_col == "upnl":
+                if old_col == "unrealised_pnl":
                     df[new_col] = df.groupby(event_features)[old_col].transform(
                         lambda x: x.shift(1).fillna(0) * -1
                     )
@@ -198,49 +141,48 @@ class Stats(AbstractStatistics):
                     )
 
             if not upnl_reversals.empty:
-                df = (
-                    df.reset_index()
-                    .merge(
-                        upnl_reversals.reset_index().rename(
-                            columns={
-                                "instrument_id": "order_book_id",
-                                "event_type": "type",
-                                "trade_date": "trading_session",
-                            }
-                        ),
-                        on=[
-                            "timestamp",
-                            "account_id",
-                            "order_book_id",
-                            "symbol",
-                            "contract_unit_of_measure",
-                            "type",
-                            "trading_session",
-                        ],
-                        how="outer",
-                        suffixes=("", "_delta"),
-                    )
-                    .set_index("timestamp")
-                )
-                # fix bug for not including upnl reversal for
-                # positions that did have a position open at the end of day 1.
-                df["upnl_reversal"] = df["upnl_reversal"].fillna(0)
+                pass
+                # df = (
+                #     df.reset_index()
+                #     .merge(
+                #         upnl_reversals.reset_index().rename(
+                #             columns={
+                #                 "instrument_id": "order_book_id",
+                #                 "event_type": "type",
+                #                 "trade_date": "trading_session",
+                #             }
+                #         ),
+                #         on=[
+                #             "timestamp",
+                #             "account_id",
+                #             "order_book_id",
+                #             "symbol",
+                #             "contract_unit_of_measure",
+                #             "type",
+                #             "trading_session",
+                #         ],
+                #         how="outer",
+                #         suffixes=("", "_delta"),
+                #     )
+                #     .set_index("timestamp")
+                # )
+                # # fix bug for not including upnl reversal for
+                # # positions that did have a position open at the end of day 1.
+                # df["upnl_reversal"] = df["upnl_reversal"].fillna(0)
+                #
+                # df.loc[
+                #     (df["upnl_reversal"] == 0) & (df["type"] == "closing_price"),
+                #     "upnl_reversal",
+                # ] = df[(df["upnl_reversal"] == 0) & (df["type"] == "closing_price")][
+                #     "upnl_reversal_delta"
+                # ].fillna(
+                #     0
+                # )
+                # df = df.drop(columns=["upnl_reversal_delta"])
 
-                df.loc[
-                    (df["upnl_reversal"] == 0) & (df["type"] == "closing_price"),
-                    "upnl_reversal",
-                ] = df[(df["upnl_reversal"] == 0) & (df["type"] == "closing_price")][
-                    "upnl_reversal_delta"
-                ].fillna(
-                    0
-                )
-                df = df.drop(columns=["upnl_reversal_delta"])
+            #df["pnl"] = df["rpnl"] + df["upnl"] + df["upnl_reversal"]
+            #df["upnl_change"] = df["upnl"] + df["upnl_reversal"]
 
-            for col in ["upnl", "rpnl", "upnl_reversal"]:
-                df[col] = df[col].fillna(0)
-
-            df["pnl"] = df["rpnl"] + df["upnl"] + df["upnl_reversal"]
-            df["upnl_change"] = df["upnl"] + df["upnl_reversal"]
         except KeyError as e:
             raise KeyError(f"key error {e}")
         return df

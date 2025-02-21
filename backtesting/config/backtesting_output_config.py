@@ -1,38 +1,50 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, AnyStr
 
-from risk_backtesting.config.type_parser import parse_bool
+from backtesting.config.type_parser import parse_bool
 
 
 class BackTestingOutputConfig:
     """
-    this class sets all of the configuration required to run a backtest from the input yaml file and optional parsed
+    This class sets all of the configuration required to run a backtest from the input YAML file and optional parsed
     arguments to RunSimulation.
     """
 
-    def __init__(self, config: Dict[str, Any], calculate_cumulative_daily_pnl: bool):
-        self.resample_rule: str = config.get("resample_rule")
-        self.event_features: List[str] = self._build_event_features(
-            config.get("event_features", ["symbol", "order_book_id", "account_id"]),
-            calculate_cumulative_daily_pnl,
-        )
-        self.metrics: List[str] = config.get(
-            "metrics",
-            [
-                "performance_overview",
-                "trading_actions_breakdown",
-                "inventory_overview",
-            ],
-        )
-        self.save: bool = parse_bool(config.get("save"))
-        self.save_per_simulation: bool = parse_bool(config.get("save_per_simulation"))
-        self.by: str = config.get("by")
-        self.freq: str = config.get("freq")
-        self.mode: str = config.get("mode")
-        self.bucket: str = config.get("bucket")
-        self.directory: str = config.get("directory")
-        self.file: str = config.get("file")
-        self.store_index: bool = config.get("store_index")
-        self.filesystem_type: str = config.get("filesystem")
+    def __init__(
+            self,
+            datastore: AnyStr,
+            datastore_parameters: Dict[AnyStr, Any],
+            resample_rule: AnyStr,
+            save: bool,
+            save_per_simulation: bool,
+            by: str,
+            freq: str,
+            mode: str,
+            file: str,
+            calculate_cumulative_daily_pnl: bool = False,
+            store_index: bool = True,
+            event_features: List[AnyStr] = ["symbol", "order_book_id", "account_id"],
+            metrics: List[AnyStr] = ["performance_overview", "trading_actions_breakdown", "inventory_overview"],
+
+    ):
+        self.datastore: str = datastore
+        self.datastore_parameters: Dict[AnyStr, Any] = datastore_parameters
+        self.resample_rule: str = resample_rule
+        self.event_features: List[str] = self._build_event_features(event_features, calculate_cumulative_daily_pnl)
+        self.metrics: List[str] = metrics
+        self.save: bool = save
+        self.save_per_simulation: bool = save_per_simulation
+        self.by: str = by
+        self.freq: str = freq
+        self.mode: str = mode
+        self.file: str = file
+        self.store_index: bool = store_index
+
+    @classmethod
+    def create(cls, config: Dict[str, Any], calculate_cumulative_daily_pnl: bool):
+        config.update({
+            'calculate_cumulative_daily_pnl': calculate_cumulative_daily_pnl
+        })
+        return cls(**config)
 
     @staticmethod
     def _build_event_features(

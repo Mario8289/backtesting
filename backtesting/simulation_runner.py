@@ -1,32 +1,22 @@
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict, AnyStr
 
 import pandas as pd
-import s3fs
 
-from lmax_analytics.dataloader.backtesting_dataloader import BacktestingLoader
-from lmax_analytics.dataloader.parquet import Parquet
-from risk_backtesting.loaders.dataserver import DataServerLoader
-from risk_backtesting.config.backtesting_config import BackTestingConfig
-from risk_backtesting.event_stream import create_event_stream, EventStream
-from risk_backtesting.filesystems import initialise_s3fs, initialise_boto3
-from risk_backtesting.loaders.load_price_slippage_model import PriceSlippageS3Loader
-from risk_backtesting.loaders.load_profiling import ProfilingLoader
-from risk_backtesting.loaders.load_snapshot import (
-    SnapshotLoader,
-    SnapshotParquetLoader,
-)
-from risk_backtesting.loaders.load_starting_positions import StartingPositionsLoader
-from risk_backtesting.loaders.load_tob import TobParquetLoader
-from risk_backtesting.loaders.load_trades import TradesParquetLoader
-from risk_backtesting.matching_engine import (
+from backtesting.config.backtesting_config import BackTestingConfig
+from backtesting.event_stream import create_event_stream, EventStream
+
+from backtesting.matching_engine import (
     create_matching_engine,
     AbstractMatchingEngine,
 )
-from risk_backtesting.risk_backtesting_result import BackTestingResults
-from risk_backtesting.simulator.simulator import Simulator
-from risk_backtesting.simulator.simulator_pool import SimulatorPool
-from risk_backtesting.writers import create_writer, Writer
+from backtesting.backtesting_result import BackTestingResults
+from backtesting.simulator.simulator import Simulator
+from backtesting.simulator.simulator_pool import SimulatorPool
+from backtesting.writers import create_writer, Writer
+from backtesting.subscriptions_cache import create_subscriptions_cache, SubscriptionsCache
+from backtesting.subscriptions.subscription import Subscription
+from backtesting.subscriptions import create_subscription
 
 
 class SimulationRunner:
@@ -34,26 +24,13 @@ class SimulationRunner:
         self.logger: logging.Logger = logging.getLogger("SimulationRunner")
 
     def run(self, config: BackTestingConfig, results: BackTestingResults):
-        self.logger.debug("initialise s3fs")
-        filesystem: s3fs.S3FileSystem = initialise_s3fs(config.auth, "input")
-        self.logger.debug("initialise loaders")
-        dataserver: DataServerLoader = DataServerLoader.initialise(
-            config.auth, "dataserver"
-        )
-        self.logger.debug("initialise loaders")
-        parquet_loader: Parquet = Parquet(config.bucket, filesystem)
-        trades_loader: TradesParquetLoader = TradesParquetLoader(loader=parquet_loader)
+        active_subscriptions = [sub for c in config.simulation_configs.values() for sub in c.subscriptions]
 
-        tob_loader: TobParquetLoader = TobParquetLoader(loader=parquet_loader)
+        subscriptions: Dict[AnyStr, Subscription] = {
+            k: create_subscription(k, v) for (k,v) in config.subscriptions.items() if k in active_subscriptions
+        }
 
-        starting_positions_loader: StartingPositionsLoader = StartingPositionsLoader(
-            loader=dataserver
-        )
-        price_slippage_loader: PriceSlippageS3Loader = PriceSlippageS3Loader(
-            loader=filesystem
-        )
-        profiling_loader: ProfilingLoader = ProfilingLoader(loader=parquet_loader)
-        snapshot_loader: SnapshotLoader = SnapshotParquetLoader(loader=parquet_loader)
+        #starting_positions_loader: StartingPositionsLoader = StartingPositionsLoader.build(config.starting_positions)
 
         self.logger.debug("initialise event stream")
         event_stream: EventStream = create_event_stream(config.event_stream_params)
@@ -65,19 +42,19 @@ class SimulationRunner:
             )
 
         simulator: Simulator = SimulatorPool(
-            dataserver=dataserver,
-            tob_loader=tob_loader,
-            trades_loader=trades_loader,
-            starting_positions_loader=starting_positions_loader,
-            price_slippage_loader=price_slippage_loader,
-            snapshot_loader=snapshot_loader,
-            event_stream=event_stream,
-            profiling_loader=profiling_loader,
+            event_stream=event_stream
         )
 
         self.logger.debug("initialise writer and matching engine")
         writer: Writer = create_writer(
-            config.output.filesystem_type, initialise_s3fs(config.auth, "output")
+            config.output.datastore,
+            config.output.datastore_parameters
+        )
+        subscriptions_cache: SubscriptionsCache = create_subscriptions_cache(
+            config.subscriptions_cache['datastore'],
+            config.subscriptions_cache['datastore_parameters'],
+            config.subscriptions_cache['enable_cache'],
+            config.subscriptions_cache['mode'],
         )
         matching_engine: AbstractMatchingEngine = create_matching_engine(
             config.matching_engine_params, config.matching_method
@@ -88,9 +65,11 @@ class SimulationRunner:
         simulator.start_simulator(
             config=config,
             results_cache=SimulationRunner._build_cache(config, config.instruments),
+            subscriptions_cache=subscriptions_cache,
             writer=writer,
             matching_engine=matching_engine,
             simulation_configs=config.simulation_configs,
+            subscriptions=subscriptions,
             results=results,
         )
 

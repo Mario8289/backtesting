@@ -1,13 +1,14 @@
 from abc import ABCMeta, abstractmethod
-from typing import List, Dict
+from typing import List, Dict, AnyStr
 
 import pandas as pd
 
-from risk_backtesting.config.backtesting_config import BackTestingConfig
-from risk_backtesting.config.simulation_config import SimulationConfig
-from risk_backtesting.matching_engine import AbstractMatchingEngine
-from risk_backtesting.risk_backtesting_result import BackTestingResults
-from risk_backtesting.writers import Writer
+from backtesting.config.backtesting_config import BackTestingConfig
+from backtesting.config.simulation_config import SimulationConfig
+from backtesting.matching_engine import AbstractMatchingEngine
+from backtesting.backtesting_result import BackTestingResults
+from backtesting.writers import Writer
+from backtesting.subscriptions.subscription import Subscription
 
 
 class AbstractSimulator(object):
@@ -21,7 +22,8 @@ class AbstractSimulator(object):
             results_cache: pd.DataFrame,
             writer: Writer,
             matching_engine: AbstractMatchingEngine,
-            simulation_configs: Dict[str, SimulationConfig],
+            simulation_configs: Dict[AnyStr, SimulationConfig],
+            subscriptions: Dict[AnyStr, Subscription],
             results: BackTestingResults,
     ):
         raise NotImplementedError("Should implement start backtester")

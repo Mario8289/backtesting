@@ -8,7 +8,7 @@ class Position:
     __slots__ = (
         "name",
         "price_increment",
-        "unit_price",
+        "contract_size",
         "currency",
         "contract_unit_of_measure",
         "realised_pnl",
@@ -28,7 +28,7 @@ class Position:
     def __init__(
             self,
             name,
-            unit_price,
+            contract_size,
             price_increment,
             netting_engine="fifo",
             currency=None,
@@ -36,7 +36,7 @@ class Position:
     ):
         self.name = name
         self.price_increment = price_increment
-        self.unit_price = unit_price
+        self.contract_size = contract_size
         self.currency = currency
         self.contract_unit_of_measure = contract_unit_of_measure
         self.realised_pnl = 0
@@ -76,12 +76,8 @@ class Position:
     def on_trade(self, quantity, price, rate_to_usd):
         self.no_of_trades += 1
         self.net_position += quantity
-        self.notional_traded += (
-                                        abs(price * quantity * self.unit_price) / 100000000
-                                ) * rate_to_usd
-        self.notional_traded_net += (
-                                            (price * quantity * self.unit_price) / 100000000
-                                    ) * rate_to_usd
+        self.notional_traded += abs(price * quantity * self.contract_size) * rate_to_usd
+        self.notional_traded_net += price * quantity * self.contract_size * rate_to_usd
         return self.update_realised_pnl(OpenPosition(quantity, price), rate_to_usd)
 
     def calculate_net_contracts(self):
@@ -97,15 +93,14 @@ class Position:
             return open_positions
 
     def update_realised_pnl(self, new_position, rate_to_usd):
-        switcher = {
-            "avg_price": self.update_realised_pnl_avg_price,
-            "lifo": self.update_realised_pnl_ordered,
-            "fifo": self.update_realised_pnl_ordered,
-        }
-        func = switcher.get(self.netting_engine)
-        # todo: python doesn't do class method switching very nicely (or at least IntelliJ doesn't like it)
-        #       maybe clean it up a bit
-        return func(new_position, rate_to_usd)
+        if self.netting_engine == 'avg_price':
+            pnl = self.update_realised_pnl_avg_price(new_position, rate_to_usd)
+        elif self.netting_engine == 'lifo':
+            pnl = self.update_realised_pnl_ordered(new_position, rate_to_usd)
+        elif self.netting_engine == 'fifo':
+            pnl = self.update_realised_pnl_ordered(new_position, rate_to_usd)
+
+        return pnl
 
     def update_realised_pnl_ordered(self, new_position, rate_to_usd):
         qty = new_position.quantity
@@ -119,21 +114,12 @@ class Position:
                 for i, pos in enumerate(self.apply_netting(open_positions)):
                     qty += pos.quantity
                     if op(qty, 0):  # open position[i] fully filled
-                        pnl = (
-                                      (pos.quantity * (new_position.price - pos.price))
-                                      * self.unit_price
-                              ) / 100000000
+                        pnl = (pos.quantity * (new_position.price - pos.price)) * self.contract_size
                         self.realised_pnl += pnl * rate_to_usd
                         new_position.quantity += pos.quantity
                         self.open_positions.pop(0)
                     else:  # new_position fully filled
-                        pnl = (
-                                      (
-                                              (new_position.quantity * -1)
-                                              * (new_position.price - pos.price)
-                                      )
-                                      * self.unit_price
-                              ) / 100000000
+                        pnl = ((new_position.quantity * -1) * (new_position.price - pos.price)) * self.contract_size
                         self.realised_pnl += pnl * rate_to_usd
                         pos.quantity += new_position.quantity
                         pos.cost = pos.price * pos.quantity
@@ -179,7 +165,7 @@ class Position:
                 realised_qty = self.open_positions.quantity * -1
                 self.open_positions = OpenPosition(quantity, new_position.price)
 
-            pnl = ((realised_qty * price_dif) * self.unit_price) / 100000000
+            pnl = ((realised_qty * price_dif) * self.contract_size) / 100000000
 
             self.realised_pnl += pnl * rate_to_usd
 
@@ -189,21 +175,13 @@ class Position:
         self.unrealised_pnl = 0
         if self.netting_engine in ["fifo", "lifo"]:
             for p in self.open_positions:
-                open_p_unrealised_pnl = (
-                                                (p.quantity * (evt_price - p.price)) * self.unit_price
-                                        ) / 100000000
+                open_p_unrealised_pnl = (p.quantity * (evt_price - p.price)) * self.contract_size
                 self.unrealised_pnl += open_p_unrealised_pnl * rate_to_usd
         elif self.netting_engine == "avg_price":
             if self.open_positions:
                 # todo: when using fifo/lifo, open_positions is a list of objects of type Position
                 #       if avg_price, then open positions is a list of 1 element. but need to make that clearer
-                open_p_unrealised_pnl = (
-                                                (
-                                                        self.open_positions.quantity
-                                                        * (evt_price - self.open_positions.price)
-                                                )
-                                                * self.unit_price
-                                        ) / 100000000
+                open_p_unrealised_pnl = (self.open_positions.quantity * (evt_price - self.open_positions.price)) * self.contract_size
                 self.unrealised_pnl += open_p_unrealised_pnl * rate_to_usd
             else:
                 self.unrealised_pnl = 0
@@ -217,11 +195,11 @@ class OpenPosition:
         self.cost = (price * quantity) if cum_cost is None else cum_cost
 
     @classmethod
-    def create_position_from_open_position_snapshot(cls, row, unit_price, risk=1):
+    def create_position_from_open_position_snapshot(cls, row, contract_size, risk=1):
         quantity: int = int(round(row.position * 100, 0) * risk)
         open_cost: int = row.open_cost * risk
         return cls(
             quantity,
-            abs(int((row.open_cost / row.position / unit_price) * 1000000)),
-            (open_cost * 100000000) / unit_price,
+            abs(int((row.open_cost / row.position / contract_size) * 1000000)),
+            (open_cost * 100000000) / contract_size,
             )

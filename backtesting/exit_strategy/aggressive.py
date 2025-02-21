@@ -7,26 +7,37 @@ from ..position import Position
 
 
 class Aggressive(AbstractExitStrategy):
-    __slots__ = ("name", "stoploss_limit", "takeprofit_limit")
+    __slots__ = ("name", "stoploss_limit", "takeprofit_limit", "exit_method")
 
-    def __init__(self, stoploss_limit, takeprofit_limit):
+    def __init__(self, stoploss_limit, takeprofit_limit, exit_method):
         self.name: str = "aggressive"
         self.stoploss_limit: int = stoploss_limit
         self.takeprofit_limit: int = takeprofit_limit
+        self.exit_method: str = exit_method
 
     def profitloss_price(self, price: float, position: float, price_increment: float):
 
         ops = [op.add, op.sub] if position > 0 else [op.sub, op.add]
 
-        # Set TakeProfit limit
-        tp_price = int(
-            ops[0](price, ((price_increment * 1000000) * self.takeprofit_limit))
-        )
+        if self.exit_method == 'tick':
+            # Set TakeProfit limit
+            tp_price = int(
+                ops[0](price, (price_increment * self.takeprofit_limit))
+            )
 
-        # Set StopLoss limit
-        sl_price = int(
-            ops[1](price, ((price_increment * 1000000) * self.stoploss_limit))
-        )
+            # Set StopLoss limit
+            sl_price = int(
+                ops[1](price, (price_increment * self.stoploss_limit))
+            )
+
+        elif self.exit_method == 'percent':
+            # Set TakeProfit limit
+            tp_price = price * (ops[0](1, (self.takeprofit_limit)))
+
+            # Set StopLoss limit
+            sl_price = price * (ops[1](1, (self.stoploss_limit)))
+        else:
+            raise ValueError(f"exit method {self.exit_method} is not a valid choice.")
 
         return sl_price, tp_price
 
@@ -37,7 +48,7 @@ class Aggressive(AbstractExitStrategy):
             avg_price: float = None,
             tick_price: float = None,
             position: Position = None,
-            **kwargs,
+            contract_qty: float = None
     ):
 
         price_sl, price_tp = self.profitloss_price(
@@ -48,33 +59,35 @@ class Aggressive(AbstractExitStrategy):
 
         orders = []
 
-        if ops[0](tick_price, price_tp):
+        contract_qty = contract_qty if contract_qty is not None else position.net_position
+
+        if ops[0](tick_price, price_tp):  # TP
             orders.append(
                 Order(
-                    event.timestamp,
-                    event.order_book_id,
-                    account,
-                    position.net_position * -1,
+                    timestamp=event.timestamp,
+                    symbol_id=event.symbol_id,
+                    account_id=account,
+                    contract_qty=contract_qty * -1,
                     order_type="R",
                     time_in_force="K",
                     symbol=event.symbol,
-                    signal="TP_close_position",
-                    event_type="hedge",
+                    signal="Take_Profit",
+                    source=event.source
                     )
             )
 
-        if ops[1](tick_price, price_sl):
+        if ops[1](tick_price, price_sl):  # SP
             orders.append(
                 Order(
-                    event.timestamp,
-                    event.order_book_id,
-                    account,
-                    position.net_position * -1,
+                    timestamp=event.timestamp,
+                    symbol_id=event.symbol_id,
+                    account_id=account,
+                    contract_qty=contract_qty,
                     order_type="S",
                     time_in_force="K",
                     symbol=event.symbol,
-                    signal="SL_close_position",
-                    event_type="hedge",
+                    signal="Stop_Loss",
+                    source=event.source
                     )
             )
 

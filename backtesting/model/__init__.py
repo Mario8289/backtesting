@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import Dict, Any, Type
 
-from risk_backtesting.model.base import AbstractModel
-from risk_backtesting.model.profiling_ranks import ProfilingRankModel
+from backtesting.model.base import AbstractModel
+from backtesting.model.profiling_ranks import ProfilingRankModel
 
 
 def determine_model_constructor(model: str) -> Type[AbstractModel]:

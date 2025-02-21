@@ -5,8 +5,6 @@ from typing import List
 import pandas as pd
 import pytz
 
-from risk_backtesting.event import Event
-
 utc_tz = pytz.timezone("UTC")
 london_tz = pytz.timezone("Europe/London")
 eastern_tz = pytz.timezone("US/Eastern")
@@ -28,52 +26,18 @@ class EventStream(ABC):
     def generate_events(
             self,
             date: dt.date,
-            trades: pd.DataFrame,
-            tob: pd.DataFrame = pd.DataFrame(),
-            closing_prices: pd.DataFrame = pd.DataFrame(),
-            account_migrations: pd.DataFrame = pd.DataFrame(),
+            subscriptions: List[pd.DataFrame]
     ) -> pd.DataFrame:
-        event = Event()
-        events = pd.DataFrame(columns=list(event.__dict__.keys()))
+        events = pd.DataFrame(columns=list(set([c for s in subscriptions for c in s.columns])))
 
-        date_time = eastern_tz.localize(
-            dt.datetime.combine(date, dt.datetime.min.time())
-        )
+        for subscription in subscriptions:
+            # subscription_events = self.standardise_events(subscription)
+            events = pd.concat([events, subscription])
 
-        if not tob.empty:
+        events.index.name = "timestamp"
+        events.sort_index(inplace=True)
+        events['trading_session'] = events.index.date
 
-            tob = self.set_untrusted_tag(tob, date_time)
-
-            _events = pd.concat([tob, trades], sort=True, copy=True).sort_index().copy()
-
-            _events = self.fill_time_tags(_events)
-            _events = self.fill_order_book_tags(_events)
-            _events = self.fill_tob_tags(_events)
-            _events = self.set_lifespan_exit_tags(_events, date_time)
-
-        else:
-            _events = trades
-
-        if not account_migrations.empty:
-            _events = (
-                pd.concat([_events, account_migrations], sort=True).sort_index().copy()
-            )
-
-        if not closing_prices.empty and self.include_eod_snapshot:
-            _events = (
-                pd.concat([_events, closing_prices], sort=True).sort_index().copy()
-            )
-
-        _events.fillna(0, inplace=True)
-
-        _events = self.standardise_events(_events)
-
-        _events.index.name = "timestamp"
-        _events.sort_values(["timestamp", "execution_id"], inplace=True)
-
-        events = events.append(
-            _events[[x for x in _events.columns if x in events.columns]], sort=True
-        )
         return events.fillna(0)
 
     @abstractmethod
@@ -154,28 +118,26 @@ class EventStream(ABC):
         if date.weekday() == 4:
             df.loc[lifespan_exit_start_time - dt.timedelta(minutes=5) :, "gfw"] = 1
         return df
-
-    @staticmethod
-    def standardise_events(df: pd.DataFrame) -> pd.DataFrame:
-        standardise_factors = [
-            {
-                "columns": [
-                    "ask_price",
-                    "bid_price",
-                    "price",
-                    "tob_snapshot_ask_price",
-                    "tob_snapshot_bid_price",
-                ],
-                "factor": 1000000,
-            },
-            {"columns": ["order_qty", "contract_qty"], "factor": 100},
-        ]
-        for col_factors in standardise_factors:
-            for col in col_factors["columns"]:
-                if col in df.columns:
-                    # noinspection PyUnresolvedReferences
-                    df.loc[:, col] = round((df[col] * col_factors["factor"])).astype(
-                        int
-                    )
-
-        return df
+    #
+    # @staticmethod
+    # def standardise_events(df: pd.DataFrame) -> pd.DataFrame:
+    #     standardise_factors = [
+    #         {
+    #             "columns": [
+    #                 "ask_price",
+    #                 "bid_price",
+    #                 "price",
+    #             ],
+    #             "factor": 1000000,
+    #         },
+    #         {"columns": ["order_qty", "contract_qty"], "factor": 100},
+    #     ]
+    #     for col_factors in standardise_factors:
+    #         for col in col_factors["columns"]:
+    #             if col in df.columns:
+    #                 # noinspection PyUnresolvedReferences
+    #                 df.loc[:, col] = round((df[col] * col_factors["factor"])).astype(
+    #                     int
+    #                 )
+    #
+    #     return df

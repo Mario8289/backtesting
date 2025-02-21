@@ -1,8 +1,9 @@
 from typing import Dict, Any
 
-from risk_backtesting.event_stream.event_stream import EventStream
-from risk_backtesting.event_stream.event_stream_sample import EventStreamSample
-from risk_backtesting.event_stream.event_stream_snapshot import EventStreamSnapshot
+from backtesting.event_stream.event_stream import EventStream
+from backtesting.event_stream.event_stream_sample import EventStreamSample
+from backtesting.event_stream.event_stream_snapshot import EventStreamSnapshot
+from backtesting.event_stream.event_stream_no_sample import EventStreamNoSample
 
 
 def determine_event_stream_constructor(event_stream_reference):
@@ -10,6 +11,8 @@ def determine_event_stream_constructor(event_stream_reference):
         return EventStreamSnapshot
     elif event_stream_reference == "event_stream_sample":
         return EventStreamSample
+    elif event_stream_reference == "event_stream_no_sample":
+        return EventStreamNoSample
     else:
         raise KeyError(f"invalid event stream reference {event_stream_reference}")
 

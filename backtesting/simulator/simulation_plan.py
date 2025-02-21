@@ -4,18 +4,19 @@ from typing import List, Type, Any, Union, Tuple, Set, Optional
 
 import pandas as pd
 
-from risk_backtesting.backtester import Backtester
-from risk_backtesting.config.backtesting_output_config import BackTestingOutputConfig
-from risk_backtesting.exit_strategy.aggressive import Aggressive
-from risk_backtesting.exit_strategy.base import AbstractExitStrategy
-from risk_backtesting.exit_strategy.chaser import Chaser
-from risk_backtesting.exit_strategy.exit_default import ExitDefault
-from risk_backtesting.exit_strategy.profit_running import ProfitRunning
-from risk_backtesting.exit_strategy.trailing_stoploss import TrailingStopLoss
-from risk_backtesting.model import ProfilingRankModel
-from risk_backtesting.model.base import AbstractModel
-from risk_backtesting.risk_manager.base import AbstractRiskManager
-from risk_backtesting.strategy.base import AbstractStrategy
+from backtesting.backtester import Backtester
+from backtesting.config.backtesting_output_config import BackTestingOutputConfig
+from backtesting.exit_strategy.aggressive import Aggressive
+from backtesting.exit_strategy.base import AbstractExitStrategy
+from backtesting.exit_strategy.chaser import Chaser
+from backtesting.exit_strategy.no_exit import NoExit
+from backtesting.exit_strategy.profit_running import ProfitRunning
+from backtesting.exit_strategy.trailing_stoploss import TrailingStopLoss
+from backtesting.model import ProfilingRankModel
+from backtesting.model.base import AbstractModel
+from backtesting.risk_manager.base import AbstractRiskManager
+from backtesting.strategy.base import AbstractStrategy
+from backtesting.subscriptions_cache.subscriptions_cache import SubscriptionsCache
 
 
 class SimulationPlan:
@@ -24,26 +25,15 @@ class SimulationPlan:
             name: str,
             uid: str,
             version: int,
-            shard: str,
             start_date: dt.date,
             end_date: dt.date,
-            target_accounts: pd.DataFrame,
-            load_snapshot: bool,
-            load_trades_iteratively_by_session: bool,
-            load_target_accounts_from_snapshot: bool,
-            load_instruments_from_snapshot: bool,
-            load_position_limits_from_snapshot: bool,
-            load_booking_risk_from_snapshot: bool,
-            load_internalisation_risk_from_snapshot: bool,
-            load_booking_risk_from_target_accounts: bool,
-            load_internalisation_risk_from_target_accounts: bool,
-            lmax_account: int,
+            account: int,
             load_starting_positions: bool,
-            load_client_starting_positions: bool,
             calculate_cumulative_daily_pnl: bool,
             level: str,
             instruments: List[int],
             event_filter_string: str,
+            subscriptions_cache: SubscriptionsCache,
             output: BackTestingOutputConfig,
             backtester: Backtester,
             strategy: AbstractStrategy,
@@ -53,26 +43,15 @@ class SimulationPlan:
         self.name: str = name
         self.uid: str = uid
         self.version: int = version
-        self.shard: str = shard
         self.start_date: dt.date = start_date
         self.end_date: dt.date = end_date
-        self.target_accounts: pd.DataFrame = target_accounts
-        self.load_snapshot: bool = load_snapshot
-        self.load_trades_iteratively_by_session: bool = load_trades_iteratively_by_session
-        self.load_target_accounts_from_snapshot: bool = load_target_accounts_from_snapshot
-        self.load_instruments_from_snapshot: bool = load_instruments_from_snapshot
-        self.load_position_limits_from_snapshot: bool = load_position_limits_from_snapshot
-        self.load_booking_risk_from_snapshot: bool = load_booking_risk_from_snapshot
-        self.load_internalisation_risk_from_snapshot: bool = load_internalisation_risk_from_snapshot
-        self.load_booking_risk_from_target_accounts: bool = load_booking_risk_from_target_accounts
-        self.load_internalisation_risk_from_target_accounts: bool = load_internalisation_risk_from_target_accounts
-        self.lmax_account: int = lmax_account
+        self.account: int = account
         self.load_starting_positions: bool = load_starting_positions
-        self.load_client_starting_positions: bool = load_client_starting_positions
         self.calculate_cumulative_daily_pnl: bool = calculate_cumulative_daily_pnl
         self.level = level
         self.instruments: List[int] = instruments
         self.event_filter_string: str = event_filter_string
+        self.subscriptions_cache: SubscriptionsCache = subscriptions_cache
         self.output: BackTestingOutputConfig = output
         self.backtester: Backtester = backtester
         self.strategy: AbstractStrategy = strategy
@@ -81,40 +60,11 @@ class SimulationPlan:
             uid, version, instruments, event_filter_string, strategy, risk_manager
         )
 
-    @property
-    def target_accounts_list(self) -> Optional[List[int]]:
-        if self.target_accounts is None:
-            return None
-        if self.target_accounts.empty:
-            return []
-        return self.target_accounts.account_id.unique().tolist()
-
-    def optionally_set_target_accounts(self, target_accounts: pd.DataFrame):
-        if self.target_accounts is not None and not self.target_accounts.empty:
-            return
-
-        self.target_accounts = self.filter_accounts(target_accounts)
-
-    def filter_accounts(self, target_accounts: pd.DataFrame) -> pd.DataFrame:
-        filtered_accounts: pd.DataFrame = target_accounts
-        if "internalisation" == self.strategy.get_name():
-            if self.lmax_account is None:
-                raise ValueError(
-                    "account_id must be provided for strategy type 'internalisation'"
-                )
-            filtered_accounts = filtered_accounts[
-                filtered_accounts.internalisation_account_id == self.lmax_account
-                ]
-
-        if "bbooking" in self.strategy.get_name():
-            filtered_accounts = filtered_accounts[filtered_accounts.booking_risk > 0]
-        return filtered_accounts
-
     def append_strategy_params(self, df: pd.DataFrame):
         # add simulation and hash
         df["simulation"] = self.name
         df["hash"] = self.hash
-        df["rpnl_cum_hash"] = df.groupby("hash")["rpnl"].cumsum()
+        df["realised_pnl_cum_hash"] = df.groupby("hash")["realised_pnl"].cumsum()
 
         # add strategy properties
         for (slot, value) in SimulationPlan._output_values(self.strategy):
@@ -141,6 +91,8 @@ class SimulationPlan:
         if self.event_filter_string:
             df["event_filter_string"] = self.event_filter_string
 
+        return df
+
     @staticmethod
     def _compute_hash(
             uid: str,
@@ -155,7 +107,7 @@ class SimulationPlan:
             Aggressive,
             ProfitRunning,
             Chaser,
-            ExitDefault,
+            NoExit,
         }
 
         models: Set[Type[AbstractModel]] = {ProfilingRankModel}

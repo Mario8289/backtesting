@@ -1,23 +1,28 @@
 import datetime as dt
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 import pandas as pd
 
 
-class Writer(ABC):
-    def __init__(self, name: str):
+class Writer:
+    def __init__(
+            self,
+            name: str,
+    ):
         self.name: str = name
+
+    @classmethod
+    def create(cls, attributes):
+        instance = cls(**attributes)
+        return instance
 
     @abstractmethod
     def write_results(
             self,
             results: pd.DataFrame,
             mode: str,
-            datasource_label: str,
-            prefix: str,
             store_index: bool,
-            bucket: str = None,
-            date: dt.date = None,
             file: str = None,
+            date: dt.date = None,
     ):
         pass

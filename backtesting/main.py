@@ -1,37 +1,24 @@
+from typing import Dict, Any, AnyStr
 import logging
 import os
 import sys
+
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, Namespace
-from typing import List, Dict, Any
+from typing import List
 
-import yaml
-
-from risk_backtesting.config.backtesting_config import BackTestingConfig
-from risk_backtesting.config.backtesting_config_factory import (
+from backtesting.config.backtesting_config import BackTestingConfig
+from backtesting.config.backtesting_config_factory import (
     BackTestingConfigFactory,
-    FILESYSTEM_TYPE_LOCAL,
-    FILESYSTEM_TYPE_S3,
 )
-from risk_backtesting.risk_backtesting_result import (
-    BackTestingResults,
-    build_backtesting_results,
+from backtesting.backtesting_result import (
+    build_backtesting_results, BackTestingResults
 )
-from risk_backtesting.simulation_runner import SimulationRunner
+from backtesting.simulation_runner import SimulationRunner
 
 
 def parse_args() -> Namespace:
     parser: ArgumentParser = ArgumentParser(
         formatter_class=ArgumentDefaultsHelpFormatter
-    )
-
-    parser.add_argument(
-        "-a", "--auth", dest="auth", help="Path to auth.yaml",
-    )
-    parser.add_argument(
-        "--minio", help="LMAX min.io server URI (overrides any value in --auth)",
-    )
-    parser.add_argument(
-        "--dataserver", help="LMAX dataserver URI (overrides any value in --auth)",
     )
 
     parser.add_argument(
@@ -42,26 +29,58 @@ def parse_args() -> Namespace:
     )
 
     parser.add_argument(
-        "-f",
-        "--filesystem",
-        help="filesystem type",
-        choices=[FILESYSTEM_TYPE_LOCAL, FILESYSTEM_TYPE_S3],
-        default=FILESYSTEM_TYPE_LOCAL,
-    )
-    parser.add_argument(
-        "-u",
-        "--bucket",
-        help=f"Bucket for config location (if using a {FILESYSTEM_TYPE_S3} filesystem)",
-    )
-
-    parser.add_argument("--scenario_path", help="Path to scenario directory")
-    parser.add_argument(
-        "--scenario", help="Which scenario to load the configuration from"
-    )
+        "-z"
+        "--datastore",
+        dest='datastore',
+        help="name of the datastore all configuration is stored")
 
     parser.add_argument(
-        "-p", "--pipeline", dest="pipeline", help="Path to pipeline configuration yaml",
+        "-y"
+        "--datastore_parameters",
+        dest='datastore_parameters',
+        help="authentication details for the datastore, entry points, etc.")
+
+    parser.add_argument(
+        "-a"
+        "--scenario_path",
+        dest='scenario_path',
+        help="Path to scenario directory")
+
+    parser.add_argument(
+        "-c",
+        "--subscriptions",
+        dest="subscriptions_path",
+        help="Path to subscriptions directory",
     )
+
+    parser.add_argument(
+        "-o"
+        "--scenario",
+        dest='scenario',
+        help="Which scenario to load the configuration from"
+    )
+
+    parser.add_argument(
+        "-p",
+        "--pipeline",
+        dest="pipeline_path",
+        help="Path to pipeline configuration yaml",
+    )
+
+    parser.add_argument(
+        "-l",
+        "--simulations_config",
+        dest="simulations_config_path",
+        help="Path to simulation configuration yaml",
+    )
+
+    parser.add_argument(
+        "-o",
+        "--output_config",
+        dest="output_config_path",
+        help="Path to output configuration yaml",
+    )
+
     parser.add_argument(
         "-b",
         "--batch",
@@ -84,71 +103,61 @@ def parse_args() -> Namespace:
         help="End Date override; %Y-%m-%d format; inclusive (overrides any value in --pipeline)",
     )
 
-    parser.add_argument(
-        "-l",
-        "--simulations_config",
-        dest="simulations_config",
-        help="Path to simulation configuration yaml",
-    )
-
-    parser.add_argument(
-        "-o",
-        "--output_config",
-        dest="output_config",
-        help="Path to output configuration yaml",
-    )
-
-    parser.add_argument(
-        "-t",
-        "--target_account",
-        help="Path to target account csv (overrides any value in --pipeline)",
-    )
-
     parser.add_argument("--log_level", help="What log level to use")
 
     return parser.parse_args()
 
 
 def main(
-        auth_path: str,
-        minio_uri: str,
-        dataserver_uri: str,
-        filesystem_type: str,
-        bucket: str,
-        scenario_path: str,
-        scenario: str,
-        pipeline_path: str,
-        simulations_path: str,
-        output_path: str,
-        target_accounts_path: str,
+        datastore: AnyStr,
+        datastore_parameters: Dict[Any, Any],
+        scenario_path: Any,
+        scenario: AnyStr,
+        subscriptions_path: AnyStr,
+        pipeline_path: AnyStr,
+        simulations_path: AnyStr,
+        output_path: AnyStr,
         num_cores: int,
         num_batches: int,
-        start_date: str,
-        end_date: str,
-        simulations_filter: List[str],
-        return_results: bool,
-        colour: str = None,
-        nomad: bool = False,
+        start_date: AnyStr,
+        end_date: AnyStr,
+        simulations_filter: List[AnyStr],
+        return_results: bool
 ) -> BackTestingResults:
-    config: BackTestingConfig = BackTestingConfigFactory().build(
-        auth_path,
-        minio_uri,
-        dataserver_uri,
-        filesystem_type,
-        bucket,
-        scenario_path,
-        scenario,
-        pipeline_path,
-        simulations_path,
-        output_path,
-        target_accounts_path,
-        num_cores,
-        num_batches,
-        start_date,
-        end_date,
-        simulations_filter,
-        colour,
-        nomad,
+
+    """
+
+    :param scenario_datastore: The name of the datastore where all configuration files are stored.
+    :param scenario_datastore_parameters: any authentication credentials required to access the configuration files.
+    :param scenario_path: This is the name base directory for the scenario that you want to run.
+    :param scenario: This is the name of the scenario that you want to run.
+    :param subscriptions_path: (OPTIONAL) is the path of the base folder that holds all your subscription credentials that you want to include when building your events stream, if not selected it will be set using the scenario that you have selected.
+    :param pipeline_path: (OPTIONAL) This is the path to the pipeline file tha you want to run, if not selected it will be set using the scenario that you have selected.
+    :param simulations_path: (OPTIONAL) This is the path to the simulations file that you want to run, if not selected it will be set using the scenario that you have selected.
+    :param output_path: (OPTIONAL) This is the path to the output file that you want to run, if not selected it will be set using the scenario that you have selected.
+    :param num_cores: (OPTIONAL) This will set the number of cores you want to use when running the simulations, if not set it will use the cores specificed in the pipeline file.
+    :param num_batches: (OPTIONAL) This will set the number of batches you want to use when running the simulations, if not set it will use the number of batches specified in the pipeline file.
+    :param start_date: (OPTIONAL) This will set the start date you want to use when runnning the simulations, if not set it will use the start date specificed in the pipleline file.
+    :param end_date: (OPTIONAL) This will set the end date you want to use when runnning the simulations, if not set it will use the end date specificed in the pipleline file.
+    :param simulations_filter: (OPTIONAL) This will restrict the simulations that are specific in the simulations_path file to a subset of simulations.
+    :param return_results: (OPTIONAL) This specifies whether or not you want to return results to the terminal where you executed the command.
+    :return:
+    """
+
+    config: BackTestingConfig = BackTestingConfigFactory.create(
+        datastore=datastore, datastore_parameters=datastore_parameters
+    ).build(
+        scenario=scenario,
+        scenario_path=scenario_path,
+        subscriptions_path=subscriptions_path,
+        pipeline_path=pipeline_path,
+        simulations_path=simulations_path,
+        output_path=output_path,
+        num_cores=num_cores,
+        num_batches=num_batches,
+        start_date=start_date,
+        end_date=end_date,
+        simulations_filter=simulations_filter,
     )
 
     results: BackTestingResults = build_backtesting_results(return_results)
@@ -156,18 +165,6 @@ def main(
     SimulationRunner().run(config, results)
 
     return results
-
-
-# noinspection PyBroadException
-def load_yaml(path: str, default: Dict[str, Any] = None) -> Dict[str, Any]:
-    if path:
-        if os.path.exists(path):
-            try:
-                with open(path, "r") as inf:
-                    return yaml.safe_load(inf)
-            except Exception:
-                pass
-    return default
 
 
 if __name__ == "__main__":
@@ -181,30 +178,24 @@ if __name__ == "__main__":
     )
     logger = logging.getLogger("main")
     logger.setLevel(log_level)
-    env_nomad: str = os.getenv("BACKTESTING_NOMAD", "NO")
-    nomad: bool = "YES" == env_nomad
-    colour: str = os.getenv("BACKTESTING_COLOUR") if nomad else None
+
     try:
+
         results: BackTestingResults = main(
-            args.auth,
-            args.minio,
-            args.dataserver,
-            args.filesystem,
-            args.bucket,
-            args.scenario_path,
-            args.scenario,
-            args.pipeline,
-            args.simulations_config,
-            args.output_config,
-            args.target_account,
-            args.cores,
-            int(args.batch) if args.batch is not None else None,
-            args.start_date,
-            args.end_date,
-            [] if args.sims is None else args.sims.split(","),
-            False,
-            colour,
-            nomad,
+            datastore=args.datastore,
+            datastore_parameters=eval(args.datastore_parameters),
+            scenario_path=args.scenario_path,
+            subscriptions_path=args.subscriptions_path,
+            scenario=args.scenario,
+            pipeline_path=args.pipeline_path,
+            simulations_path=args.simulations_config_path,
+            output_path=args.output_config_path,
+            num_cores=args.cores,
+            num_batches=int(args.batch) if args.batch is not None else None,
+            start_date=args.start_date,
+            end_date=args.end_date,
+            simulations_filter=[] if args.sims is None else args.sims.split(","),
+            return_results=False,
         )
 
         if 0 != len(results.errors):

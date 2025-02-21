@@ -1,7 +1,7 @@
 from typing import Any, Dict, Type
 
-from risk_backtesting.risk_manager.base import AbstractRiskManager
-from risk_backtesting.risk_manager.no_risk import NoRisk
+from backtesting.risk_manager.base import AbstractRiskManager
+from backtesting.risk_manager.no_risk import NoRisk
 
 
 def determine_risk_manager_constructor(

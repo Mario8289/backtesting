@@ -1,11 +1,11 @@
 from typing import Type, Any, Dict
 
-from risk_backtesting.exit_strategy.aggressive import Aggressive
-from risk_backtesting.exit_strategy.base import AbstractExitStrategy
-from risk_backtesting.exit_strategy.chaser import Chaser
-from risk_backtesting.exit_strategy.exit_default import ExitDefault
-from risk_backtesting.exit_strategy.profit_running import ProfitRunning
-from risk_backtesting.exit_strategy.trailing_stoploss import TrailingStopLoss
+from backtesting.exit_strategy.aggressive import Aggressive
+from backtesting.exit_strategy.base import AbstractExitStrategy
+from backtesting.exit_strategy.chaser import Chaser
+from backtesting.exit_strategy.no_exit import NoExit
+from backtesting.exit_strategy.profit_running import ProfitRunning
+from backtesting.exit_strategy.trailing_stoploss import TrailingStopLoss
 
 
 def determine_exit_strategy_constructor(exit_type: str) -> Type[AbstractExitStrategy]:
@@ -17,8 +17,8 @@ def determine_exit_strategy_constructor(exit_type: str) -> Type[AbstractExitStra
         return Chaser
     elif "profit_running" == exit_type:
         return ProfitRunning
-    elif "exit_default" == exit_type:
-        return ExitDefault
+    elif "no_exit" == exit_type:
+        return NoExit
     else:
         raise ValueError(f"Invalid exit strategy reference {exit_type}")
 

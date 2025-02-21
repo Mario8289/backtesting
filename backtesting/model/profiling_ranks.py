@@ -3,7 +3,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 
-from risk_backtesting.model.base import AbstractModel
+from backtesting.model.base import AbstractModel
 
 DEFAULT_RANK_EVALUATION_STRING: dict = {
     "rank1": "profitable_rpnl_ratio > losing_rpnl_ratio",

@@ -1,123 +1,66 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# One-liner to convert timestamp to US Eastern Time and extract the date
+
+
+# event types
+Market_Data = 'market_data'
+Trade_Data = 'trade_data'
+Closing_Price = 'closing_price'
+
+
+__required_slots__ = [
+    "timestamp_millis"
+]
+
+
 class Event:
+
     def __init__(
             self,
-            datasource=None,
-            order_book_id=None,
-            unit_price=0,
-            symbol=None,
-            price_increment=None,
-            timestamp=None,
-            timestamp_micros=None,
-            account_id=0,
-            contract_qty=0,
-            price=0,
-            event_type=None,
-            booking_risk=None,
-            internalisation_risk=None,
-            internalise_limit_orders=True,
-            secondary_booking_risk=None,
-            order_qty=None,
-            ask_price=0,
-            ask_qty=0,
-            bid_price=0,
-            bid_qty=0,
-            currency=None,
-            contract_unit_of_measure=None,
-            execution_id=None,
-            venue=None,
-            pegged_price=None,
-            tob_snapshot_bid_price=None,
-            tob_snapshot_ask_price=None,
-            bid_adjustment=None,
-            ask_adjustment=None,
-            rate_to_usd=1,
-            trading_session=None,
-            trading_session_year=None,
-            trading_session_month=None,
-            trading_session_day=None,
-            utc_year=None,
-            utc_month=None,
-            utc_day=None,
-            utc_hour=None,
-            utc_minute=None,
-            gfd=None,
-            gfw=None,
-            order_id=None,
-            counterparty_account_id=None,
-            immediate_order=None,
-            untrusted=None,
+            **kwargs
     ):
-        self.datasource = datasource
-        self.execution_id = execution_id
-        self.order_book_id = order_book_id
-        self.immediate_order = immediate_order
-        self.unit_price = unit_price
-        self.symbol = symbol
-        self.price_increment = price_increment
-        self.timestamp = timestamp
-        self.timestamp_micros = timestamp_micros
-        self.type = event_type
-        self.ask_price = int(ask_price)
-        self.ask_qty = ask_qty
-        self.bid_price = int(bid_price)
-        self.bid_qty = bid_qty
-        self.tob_snapshot_bid_price = tob_snapshot_bid_price
-        self.tob_snapshot_ask_price = tob_snapshot_ask_price
-        self.bid_adjustment = bid_adjustment
-        self.ask_adjustment = ask_adjustment
-        self.currency = currency
-        self.contract_unit_of_measure = contract_unit_of_measure
-        self.account_id = int(account_id)
-        self.counterparty_account_id = counterparty_account_id
-        self.contract_qty = int(contract_qty)
-        self.order_qty = int(self.contract_qty) if order_qty is None else int(order_qty)
-        self.order_id = order_id
-        self.event_type = event_type
-        self.booking_risk: float = booking_risk
-        self.internalisation_risk: float = internalisation_risk
-        self.internalise_limit_orders: bool = bool(internalise_limit_orders)
-        self.secondary_booking_risk: float = secondary_booking_risk
-        self.price = int(price)
-        self.notional_value = self.contract_qty * self.unit_price * self.price
-        self.is_long = True if self.contract_qty > 0 else False
-        self.pegged_price = pegged_price
-        self.venue = venue
-        self.rate_to_usd = rate_to_usd
-        self.trading_session = trading_session
-        self.trading_session_year = trading_session_year
-        self.trading_session_month = trading_session_month
-        self.trading_session_day = trading_session_day
-        self.utc_year = utc_year
-        self.utc_month = utc_month
-        self.utc_day = utc_day
-        self.utc_hour = utc_hour
-        self.utc_minute = utc_minute
-        self.gfd = gfd
-        self.gfw = gfw
-        self.untrusted = untrusted
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
-    def get_tob_price(self, is_long=True, match="mid", standardised=False):
-        if match == "side_of_book":
-            if standardised:
-                price = round((self.bid_price if is_long else self.ask_price))
+    @classmethod
+    def create(cls, attributes):
+
+        missing_required_slot = [s for s in __required_slots__ if s not in attributes.keys()]
+
+        if len(missing_required_slot) != 0:
+            raise KeyError(f"{__file__} is mising the required slots {','.join(missing_required_slot)}")
+
+        attributes['trading_session'] = datetime.fromtimestamp(
+            attributes['timestamp_millis'] / 1000, tz=ZoneInfo('UTC')
+        ).astimezone(ZoneInfo('America/New_York')).date()
+
+        event = Event(**attributes)
+        return event
+
+    @property
+    def has_price(self):
+        return hasattr(self, 'price') or hasattr(self, 'ask_price') or hasattr(self, 'bid_price')
+
+    def get_price(
+            self,
+            is_long: bool = None,
+            matching_method: str = None
+    ):
+        if hasattr(self, 'ask_price') or hasattr(self, 'bid_price'):
+            if matching_method == 'side_of_book':
+                if is_long:
+                    price = getattr(self, 'ask_price')
+                else:
+                    price = getattr(self, 'bid_price')
+            elif matching_method == 'mid_price':
+                price = (getattr(self, 'ask_price') + getattr(self, 'bid_price')) / 2
             else:
-
-                price = (self.bid_price if is_long else self.ask_price) / 1000000
-        elif match == "mid":
-            if standardised:
-                price = int(((self.ask_price + self.bid_price) / 2))
-            else:
-                price = ((self.ask_price + self.bid_price) / 2) / 1000000
+                price = (getattr(self, 'ask_price') + getattr(self, 'bid_price')) / 2
         else:
-            return KeyError(f"match key {match} not valide")
+            price = getattr(self, 'price')
 
-        return price
-
-    def get_tob_quantity(self, is_long=True, standardised=False):
-        if standardised:
-            price = self.bid_qty if is_long else self.ask_qty
-        else:
-            price = (self.bid_qty if is_long else self.ask_qty) / 1000000
         return price
 
     def get_timestamp(self):

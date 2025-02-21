@@ -33,8 +33,8 @@ class EventStreamSnapshot(EventStream):
         )
         return [start, end]
 
-    def sample(self, tob: pd.DataFrame, trading_session: dt.datetime) -> pd.DataFrame:
-        if not tob.empty:
+    def sample(self, market_data: pd.DataFrame, trading_session: dt.datetime) -> pd.DataFrame:
+        if not market_data.empty:
             time_bounds = self.get_trading_session_bounds(trading_session)
 
             _tick_index: pd.DatetimeIndex = pd.date_range(
@@ -43,31 +43,22 @@ class EventStreamSnapshot(EventStream):
 
             _tick_df: pd.DataFrame = pd.DataFrame()
 
-            for symbol in tob.order_book_id.unique().tolist():
+            for symbol_id in market_data.symbol_id.unique().tolist():
                 _tick_symbol_df = pd.DataFrame(
                     index=_tick_index,
-                    data={"order_book_id": symbol, "event_type": "market_data"},
+                    data={"symbol_id": symbol_id, "event_type": "market_data"},
                 )
                 _tick_df = pd.concat([_tick_df, _tick_symbol_df], axis=0)
                 _tick_df.sort_index(inplace=True)
 
-            tob_sample: pd.DataFrame = pd.merge_asof(
+            market_data_sample: pd.DataFrame = pd.merge_asof(
                 _tick_df,
-                tob[
-                    [
-                        "order_book_id",
-                        "bid_price",
-                        "bid_qty",
-                        "ask_price",
-                        "ask_qty",
-                        "trading_session",
-                    ]
-                ],
+                market_data,
                 direction="backward",
-                by="order_book_id",
+                by="symbol_id",
                 left_index=True,
                 right_index=True,
             )
-            return tob_sample
+            return market_data_sample
         else:
-            return tob
+            return market_data

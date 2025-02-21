@@ -1,8 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from datetime import date
 
-from ..loaders.load_price_slippage_model import PriceSlippageLoader
-
 
 class AbstractMatchingEngine(object):
 
@@ -12,7 +10,7 @@ class AbstractMatchingEngine(object):
         pass
 
     def load_model(
-            self, loader: PriceSlippageLoader, datasource_label: str, date: date
+            self, loader, datasource_label: str, date: date
     ):
         pass
 
